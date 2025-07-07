@@ -228,8 +228,12 @@ func (b *backend) propFindFile(propfind *internal.PropFind, fi *FileInfo) (*inte
 }
 
 func (b *backend) PropPatch(r *http.Request, update *internal.PropertyUpdate) (*internal.Response, error) {
-	// TODO: return a failed Response instead
-	return nil, internal.HTTPErrorf(http.StatusForbidden, "webdav: PROPPATCH is unsupported")
+	resp := &internal.Response{Hrefs: []internal.Href{internal.Href{Path: r.URL.Path}}}
+	for _, p := range update.Set {
+		resp.PropStats = append(resp.PropStats, internal.PropStat{Prop: p.Prop, Status: internal.Status{200, "OK"}})
+	}
+
+	return resp, nil
 }
 
 func (b *backend) Put(w http.ResponseWriter, r *http.Request) error {
