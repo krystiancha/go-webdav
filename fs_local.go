@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
+	iofs "io/fs"
 	"mime"
 	"net/http"
 	"os"
@@ -67,14 +67,14 @@ func fileInfoFromOS(p string, fi os.FileInfo) *FileInfo {
 
 func errFromOS(err error) error {
 	// Remove path from path errors so it's not returned to the user
-	var perr *fs.PathError
+	var perr *iofs.PathError
 	if errors.As(err, &perr) {
 		err = fmt.Errorf("%s: %w", perr.Op, perr.Err)
 	}
 
-	if errors.Is(err, fs.ErrNotExist) {
+	if errors.Is(err, iofs.ErrNotExist) {
 		return NewHTTPError(http.StatusNotFound, err)
-	} else if errors.Is(err, fs.ErrPermission) {
+	} else if errors.Is(err, iofs.ErrPermission) {
 		return NewHTTPError(http.StatusForbidden, err)
 	} else if errors.Is(err, os.ErrDeadlineExceeded) {
 		return NewHTTPError(http.StatusServiceUnavailable, err)
@@ -103,7 +103,9 @@ func (fs LocalFileSystem) ReadDir(ctx context.Context, name string, recursive bo
 
 	var l []FileInfo
 	err = filepath.Walk(path, func(p string, fi os.FileInfo, err error) error {
-		if err != nil {
+		if errors.Is(err, iofs.ErrPermission) {
+			return nil
+		} else if err != nil {
 			return err
 		}
 
